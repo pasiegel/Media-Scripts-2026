@@ -193,7 +193,7 @@ cls
 .\core\python-3.12.3\Scripts\mnamer.exe --movie-directory="{name} ({year})" --episode-directory="{series}" .
 '@
 
-Write-BatFile "Standard x264 Base Encode.bat" @'
+Write-BatFile "Standard x264 Base Encode (HandBrake).bat" @'
 @echo off
 @title Encode - Standard x264 Base
 setlocal
@@ -209,8 +209,13 @@ echo ================================================================
 echo.
 echo [%LOGSTAMP%] Standard x264 Base Encode started >> "%LOGFILE%"
 
+set found=0
+
+if not "%~1"=="" goto :drag_mode
+
 for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\Input\*.m4v" ".\Input\*.wmv" ".\Input\*.flv" ".\Input\*.webm" ".\Input\*.mpeg" ".\Input\*.mpg") do (
     if exist "%%i" (
+        set found=1
         echo Encoding: %%~nxi
         echo [%LOGSTAMP%] Encoding: %%~nxi >> "%LOGFILE%"
         .\core\HandBrakeCLI.exe --preset-import-file .\core\presets.json -Z "standard" ^
@@ -227,6 +232,35 @@ for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\I
         echo.
     )
 )
+goto :all_done
+
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+.\core\HandBrakeCLI.exe --preset-import-file .\core\presets.json -Z "standard" ^
+    -s "1,2,3,4,5,6" -i "%INFILE%" -o ".\Output\%INNAME%.mp4"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%.mp4 >> "%LOGFILE%"
+    echo Done: %INNAME%.mp4
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
+if "%found%"=="0" (
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
+    echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
+    echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
+)
 
 .\core\rename.bat
 echo [%LOGSTAMP%] Session complete >> "%LOGFILE%"
@@ -236,9 +270,9 @@ echo  All done. Press any key to exit.
 pause >nul
 '@
 
-Write-BatFile "Standard x264 Base Encode (MKV).bat" @'
+Write-BatFile "Standard x264 Base Encode (HandBrake MKV).bat" @'
 @echo off
-@title Encode - Standard x264 Base (MKV)
+@title Encode - Standard x264 Base (HandBrake MKV)
 setlocal
 cd /d "%~dp0"
 
@@ -253,6 +287,8 @@ echo.
 echo [%LOGSTAMP%] Standard x264 Base Encode (MKV) started >> "%LOGFILE%"
 
 set found=0
+
+if not "%~1"=="" goto :drag_mode
 
 for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\Input\*.m4v" ".\Input\*.wmv" ".\Input\*.flv" ".\Input\*.webm" ".\Input\*.mpeg" ".\Input\*.mpg") do (
     if exist "%%i" (
@@ -273,9 +309,33 @@ for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\I
         echo.
     )
 )
+goto :all_done
 
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+.\core\HandBrakeCLI.exe --preset-import-file .\core\presets.json -Z "standard" ^
+    --format av_mkv -s "1,2,3,4,5,6" -i "%INFILE%" -o ".\Output\%INNAME%.mkv"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%.mkv >> "%LOGFILE%"
+    echo Done: %INNAME%.mkv
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
 if "%found%"=="0" (
-    echo No video files found in .\Input\
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
+    echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
     echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
 )
 
@@ -287,9 +347,9 @@ echo  All done. Press any key to exit.
 pause >nul
 '@
 
-Write-BatFile "Encode 480p Downscale.bat" @'
+Write-BatFile "Encode 480p Downscale (HandBrake).bat" @'
 @echo off
-@title Encode - 480p Downscale (HandBrake x264)
+@title Encode - 480p Downscale (HandBrake)
 setlocal
 cd /d "%~dp0"
 set PRESET_FILE=.\core\480p.json
@@ -304,12 +364,12 @@ echo ================================================================
 echo  480p Downscale Encoder - x264, CRF 22, AAC 160k
 echo  Log: logs\encode_%LOGSTAMP%.log
 echo ================================================================
-echo  Input:  %INPUT_DIR%
-echo  Output: %OUTPUT_DIR%
 echo.
 echo [%LOGSTAMP%] 480p Downscale (HandBrake) started >> "%LOGFILE%"
 
 set found=0
+
+if not "%~1"=="" goto :drag_mode
 
 for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_DIR%\*.mov" "%INPUT_DIR%\*.m4v" "%INPUT_DIR%\*.wmv" "%INPUT_DIR%\*.flv" "%INPUT_DIR%\*.webm" "%INPUT_DIR%\*.mpeg" "%INPUT_DIR%\*.mpg") do (
     if exist "%%i" (
@@ -330,9 +390,32 @@ for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_
         echo.
     )
 )
+goto :all_done
 
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+.\core\HandBrakeCLI.exe --preset-import-file "%PRESET_FILE%" -Z "%PRESET_NAME%" ^
+    -s "1,2,3,4,5,6" -i "%INFILE%" -o "%OUTPUT_DIR%\%INNAME%_480p.mp4"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%_480p.mp4 >> "%LOGFILE%"
+    echo Done: %INNAME%_480p.mp4
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
 if "%found%"=="0" (
-    echo No video files found in %INPUT_DIR%
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
     echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
     echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
 )
@@ -345,9 +428,9 @@ echo  All done. Press any key to exit.
 pause >nul
 '@
 
-Write-BatFile "Encode 2160p Upscale.bat" @'
+Write-BatFile "Encode 2160p Upscale (HandBrake).bat" @'
 @echo off
-@title Encode - 2160p Upscale (HandBrake x265)
+@title Encode - 2160p Upscale (HandBrake)
 setlocal
 cd /d "%~dp0"
 set PRESET_FILE=.\core\2160p.json
@@ -364,12 +447,12 @@ echo  NOTE: Upscaling adds detail sharpening but cannot add detail
 echo        that was not in the original source.
 echo  Log: logs\encode_%LOGSTAMP%.log
 echo ================================================================
-echo  Input:  %INPUT_DIR%
-echo  Output: %OUTPUT_DIR%
 echo.
 echo [%LOGSTAMP%] 2160p Upscale (HandBrake) started >> "%LOGFILE%"
 
 set found=0
+
+if not "%~1"=="" goto :drag_mode
 
 for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_DIR%\*.mov" "%INPUT_DIR%\*.m4v" "%INPUT_DIR%\*.wmv" "%INPUT_DIR%\*.flv" "%INPUT_DIR%\*.webm" "%INPUT_DIR%\*.mpeg" "%INPUT_DIR%\*.mpg") do (
     if exist "%%i" (
@@ -390,9 +473,32 @@ for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_
         echo.
     )
 )
+goto :all_done
 
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+.\core\HandBrakeCLI.exe --preset-import-file "%PRESET_FILE%" -Z "%PRESET_NAME%" ^
+    -s "1,2,3,4,5,6" -i "%INFILE%" -o "%OUTPUT_DIR%\%INNAME%_2160p.mp4"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%_2160p.mp4 >> "%LOGFILE%"
+    echo Done: %INNAME%_2160p.mp4
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
 if "%found%"=="0" (
-    echo No video files found in %INPUT_DIR%
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
     echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
     echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
 )
@@ -405,9 +511,9 @@ echo  All done. Press any key to exit.
 pause >nul
 '@
 
-Write-BatFile "Encode 480p (FFmpeg).bat" @'
+Write-BatFile "Encode 480p Downscale (FFmpeg).bat" @'
 @echo off
-@title Encode - 480p Downscale (FFmpeg x264)
+@title Encode - 480p Downscale (FFmpeg)
 setlocal
 cd /d "%~dp0"
 set FFMPEG=.\core\ffmpeg\ffmpeg.exe
@@ -429,12 +535,12 @@ if not exist "%FFMPEG%" (
     exit /b 1
 )
 
-echo  Input:  %INPUT_DIR%
-echo  Output: %OUTPUT_DIR%
 echo.
 echo [%LOGSTAMP%] 480p Downscale (FFmpeg) started >> "%LOGFILE%"
 
 set found=0
+
+if not "%~1"=="" goto :drag_mode
 
 for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_DIR%\*.mov" "%INPUT_DIR%\*.m4v" "%INPUT_DIR%\*.wmv" "%INPUT_DIR%\*.flv" "%INPUT_DIR%\*.webm" "%INPUT_DIR%\*.mpeg" "%INPUT_DIR%\*.mpg") do (
     if exist "%%i" (
@@ -461,9 +567,38 @@ for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_
         echo.
     )
 )
+goto :all_done
 
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+"%FFMPEG%" -hide_banner -loglevel warning -stats ^
+    -i "%INFILE%" ^
+    -vf "scale=854:480:flags=lanczos,setsar=1" ^
+    -c:v libx264 -crf 22 -preset medium -profile:v main ^
+    -c:a aac -b:a 160k -ac 2 ^
+    -c:s copy ^
+    -movflags +faststart ^
+    "%OUTPUT_DIR%\%INNAME%_480p.mp4"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%_480p.mp4 >> "%LOGFILE%"
+    echo Done: %INNAME%_480p.mp4
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
 if "%found%"=="0" (
-    echo No video files found in %INPUT_DIR%
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
     echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
     echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
 )
@@ -475,9 +610,9 @@ echo  All done. Press any key to exit.
 pause >nul
 '@
 
-Write-BatFile "Encode 2160p (FFmpeg).bat" @'
+Write-BatFile "Encode 2160p Upscale (FFmpeg).bat" @'
 @echo off
-@title Encode - 2160p Upscale (FFmpeg x265)
+@title Encode - 2160p Upscale (FFmpeg)
 setlocal
 cd /d "%~dp0"
 set FFMPEG=.\core\ffmpeg\ffmpeg.exe
@@ -501,12 +636,12 @@ if not exist "%FFMPEG%" (
     exit /b 1
 )
 
-echo  Input:  %INPUT_DIR%
-echo  Output: %OUTPUT_DIR%
 echo.
 echo [%LOGSTAMP%] 2160p Upscale (FFmpeg) started >> "%LOGFILE%"
 
 set found=0
+
+if not "%~1"=="" goto :drag_mode
 
 for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_DIR%\*.mov" "%INPUT_DIR%\*.m4v" "%INPUT_DIR%\*.wmv" "%INPUT_DIR%\*.flv" "%INPUT_DIR%\*.webm" "%INPUT_DIR%\*.mpeg" "%INPUT_DIR%\*.mpg") do (
     if exist "%%i" (
@@ -534,9 +669,39 @@ for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_
         echo.
     )
 )
+goto :all_done
 
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+"%FFMPEG%" -hide_banner -loglevel warning -stats ^
+    -i "%INFILE%" ^
+    -vf "scale=3840:2160:flags=lanczos,setsar=1" ^
+    -c:v libx265 -crf 20 -preset slow ^
+    -tag:v hvc1 ^
+    -c:a aac -b:a 192k -ac 2 ^
+    -c:s copy ^
+    -movflags +faststart ^
+    "%OUTPUT_DIR%\%INNAME%_2160p.mp4"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%_2160p.mp4 >> "%LOGFILE%"
+    echo Done: %INNAME%_2160p.mp4
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
 if "%found%"=="0" (
-    echo No video files found in %INPUT_DIR%
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
     echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
     echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
 )
@@ -548,12 +713,14 @@ echo  All done. Press any key to exit.
 pause >nul
 '@
 
-Write-BatFile "Encode 480p Downscale (MKV).bat" @'
+Write-BatFile "Encode 480p Downscale (FFmpeg MKV).bat" @'
 @echo off
-@title Encode - 480p Downscale (MKV)
+@title Encode - 480p Downscale (FFmpeg MKV)
 setlocal
 cd /d "%~dp0"
 set FFMPEG=.\core\ffmpeg\ffmpeg.exe
+set INPUT_DIR=.\Input
+set OUTPUT_DIR=.\Output
 
 for /f "tokens=*" %%d in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set LOGSTAMP=%%d
 set LOGFILE=.\logs\encode_%LOGSTAMP%.log
@@ -576,7 +743,9 @@ echo [%LOGSTAMP%] 480p Downscale MKV started >> "%LOGFILE%"
 
 set found=0
 
-for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\Input\*.m4v" ".\Input\*.wmv" ".\Input\*.flv" ".\Input\*.webm" ".\Input\*.mpeg" ".\Input\*.mpg") do (
+if not "%~1"=="" goto :drag_mode
+
+for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_DIR%\*.mov" "%INPUT_DIR%\*.m4v" "%INPUT_DIR%\*.wmv" "%INPUT_DIR%\*.flv" "%INPUT_DIR%\*.webm" "%INPUT_DIR%\*.mpeg" "%INPUT_DIR%\*.mpg") do (
     if exist "%%i" (
         set found=1
         echo Encoding: %%~nxi
@@ -587,10 +756,10 @@ for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\I
             -c:v libx264 -crf 22 -preset medium -profile:v main ^
             -c:a aac -b:a 160k -ac 2 ^
             -c:s copy ^
-            ".\Output\%%~ni_480p.mkv"
+            "%OUTPUT_DIR%\%%~ni_480p.mkv"
         if not errorlevel 1 (
             echo [%LOGSTAMP%] OK: %%~ni_480p.mkv >> "%LOGFILE%"
-            move "%%i" ".\Input\done\" >nul 2>&1
+            move "%%i" "%INPUT_DIR%\done\" >nul 2>&1
             if errorlevel 1 del "%%i"
             echo Done: %%~ni_480p.mkv
         ) else (
@@ -600,9 +769,38 @@ for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\I
         echo.
     )
 )
+goto :all_done
 
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+"%FFMPEG%" -hide_banner -loglevel warning -stats ^
+    -i "%INFILE%" ^
+    -vf "scale=854:480:flags=lanczos,setsar=1" ^
+    -c:v libx264 -crf 22 -preset medium -profile:v main ^
+    -c:a aac -b:a 160k -ac 2 ^
+    -c:s copy ^
+    "%OUTPUT_DIR%\%INNAME%_480p.mkv"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%_480p.mkv >> "%LOGFILE%"
+    echo Done: %INNAME%_480p.mkv
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
 if "%found%"=="0" (
-    echo No video files found in .\Input\
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
+    echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
     echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
 )
 
@@ -613,12 +811,14 @@ echo  All done. Press any key to exit.
 pause >nul
 '@
 
-Write-BatFile "Encode 2160p Upscale (MKV).bat" @'
+Write-BatFile "Encode 2160p Upscale (FFmpeg MKV).bat" @'
 @echo off
-@title Encode - 2160p Upscale (MKV)
+@title Encode - 2160p Upscale (FFmpeg MKV)
 setlocal
 cd /d "%~dp0"
 set FFMPEG=.\core\ffmpeg\ffmpeg.exe
+set INPUT_DIR=.\Input
+set OUTPUT_DIR=.\Output
 
 for /f "tokens=*" %%d in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set LOGSTAMP=%%d
 set LOGFILE=.\logs\encode_%LOGSTAMP%.log
@@ -642,7 +842,9 @@ echo [%LOGSTAMP%] 2160p Upscale MKV started >> "%LOGFILE%"
 
 set found=0
 
-for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\Input\*.m4v" ".\Input\*.wmv" ".\Input\*.flv" ".\Input\*.webm" ".\Input\*.mpeg" ".\Input\*.mpg") do (
+if not "%~1"=="" goto :drag_mode
+
+for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_DIR%\*.mov" "%INPUT_DIR%\*.m4v" "%INPUT_DIR%\*.wmv" "%INPUT_DIR%\*.flv" "%INPUT_DIR%\*.webm" "%INPUT_DIR%\*.mpeg" "%INPUT_DIR%\*.mpg") do (
     if exist "%%i" (
         set found=1
         echo Encoding: %%~nxi
@@ -653,10 +855,10 @@ for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\I
             -c:v libx265 -crf 20 -preset slow ^
             -c:a aac -b:a 192k -ac 2 ^
             -c:s copy ^
-            ".\Output\%%~ni_2160p.mkv"
+            "%OUTPUT_DIR%\%%~ni_2160p.mkv"
         if not errorlevel 1 (
             echo [%LOGSTAMP%] OK: %%~ni_2160p.mkv >> "%LOGFILE%"
-            move "%%i" ".\Input\done\" >nul 2>&1
+            move "%%i" "%INPUT_DIR%\done\" >nul 2>&1
             if errorlevel 1 del "%%i"
             echo Done: %%~ni_2160p.mkv
         ) else (
@@ -666,9 +868,137 @@ for %%i in (".\Input\*.mp4" ".\Input\*.mkv" ".\Input\*.avi" ".\Input\*.mov" ".\I
         echo.
     )
 )
+goto :all_done
 
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Encoding: %~nx1
+echo [%LOGSTAMP%] Encoding: %~nx1 >> "%LOGFILE%"
+"%FFMPEG%" -hide_banner -loglevel warning -stats ^
+    -i "%INFILE%" ^
+    -vf "scale=3840:2160:flags=lanczos,setsar=1" ^
+    -c:v libx265 -crf 20 -preset slow ^
+    -c:a aac -b:a 192k -ac 2 ^
+    -c:s copy ^
+    "%OUTPUT_DIR%\%INNAME%_2160p.mkv"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%_2160p.mkv >> "%LOGFILE%"
+    echo Done: %INNAME%_2160p.mkv
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Encode failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
 if "%found%"=="0" (
-    echo No video files found in .\Input\
+    echo No video files found.
+    echo Drag a file onto this bat, or place files in .\Input\
+    echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
+    echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
+)
+
+echo [%LOGSTAMP%] Session complete >> "%LOGFILE%"
+echo.
+echo ================================================================
+echo  All done. Press any key to exit.
+pause >nul
+'@
+
+Write-BatFile "SBS to Anaglyph 3D.bat" @'
+@echo off
+@title Encode - SBS to Anaglyph 3D
+setlocal
+cd /d "%~dp0"
+set FFMPEG=.\core\ffmpeg\ffmpeg.exe
+set INPUT_DIR=.\Input
+set OUTPUT_DIR=.\Output
+
+for /f "tokens=*" %%d in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set LOGSTAMP=%%d
+set LOGFILE=.\logs\encode_%LOGSTAMP%.log
+
+echo ================================================================
+echo  SBS to Anaglyph 3D - Half Side-by-Side to Red/Cyan Dubois
+echo  Input:  Half SBS (left eye on left)
+echo  Output: Anaglyph Red/Cyan (Dubois) - x264, CRF 20, MP4
+echo  Log: logs\encode_%LOGSTAMP%.log
+echo ================================================================
+
+if not exist "%FFMPEG%" (
+    echo ERROR: FFmpeg not found at %FFMPEG%
+    echo Run Update-Tools.bat to download FFmpeg.
+    pause
+    exit /b 1
+)
+
+echo.
+echo [%LOGSTAMP%] SBS to Anaglyph 3D started >> "%LOGFILE%"
+
+set found=0
+
+if not "%~1"=="" goto :drag_mode
+
+for %%i in ("%INPUT_DIR%\*.mp4" "%INPUT_DIR%\*.mkv" "%INPUT_DIR%\*.avi" "%INPUT_DIR%\*.mov" "%INPUT_DIR%\*.m4v" "%INPUT_DIR%\*.wmv" "%INPUT_DIR%\*.flv" "%INPUT_DIR%\*.webm" "%INPUT_DIR%\*.mpeg" "%INPUT_DIR%\*.mpg") do (
+    if exist "%%i" (
+        set found=1
+        echo Converting: %%~nxi
+        echo [%LOGSTAMP%] Converting: %%~nxi >> "%LOGFILE%"
+        "%FFMPEG%" -hide_banner -loglevel warning -stats ^
+            -i "%%i" ^
+            -vf "stereo3d=sbs2l:arcd" ^
+            -c:v libx264 -crf 20 -preset fast ^
+            -c:a copy ^
+            -movflags +faststart ^
+            "%OUTPUT_DIR%\%%~ni_Anaglyph.mp4"
+        if not errorlevel 1 (
+            echo [%LOGSTAMP%] OK: %%~ni_Anaglyph.mp4 >> "%LOGFILE%"
+            move "%%i" "%INPUT_DIR%\done\" >nul 2>&1
+            if errorlevel 1 del "%%i"
+            echo Done: %%~ni_Anaglyph.mp4
+        ) else (
+            echo [%LOGSTAMP%] FAILED: %%~nxi >> "%LOGFILE%"
+            echo WARNING: Conversion failed for %%~nxi - file kept in Input
+        )
+        echo.
+    )
+)
+goto :all_done
+
+:drag_mode
+if "%~1"=="" goto :all_done
+set "INFILE=%~1"
+set "INNAME=%~n1"
+set found=1
+echo Converting: %~nx1
+echo [%LOGSTAMP%] Converting: %~nx1 >> "%LOGFILE%"
+"%FFMPEG%" -hide_banner -loglevel warning -stats ^
+    -i "%INFILE%" ^
+    -vf "stereo3d=sbs2l:arcd" ^
+    -c:v libx264 -crf 20 -preset fast ^
+    -c:a copy ^
+    -movflags +faststart ^
+    "%OUTPUT_DIR%\%INNAME%_Anaglyph.mp4"
+if not errorlevel 1 (
+    echo [%LOGSTAMP%] OK: %INNAME%_Anaglyph.mp4 >> "%LOGFILE%"
+    echo Done: %INNAME%_Anaglyph.mp4
+) else (
+    echo [%LOGSTAMP%] FAILED: %~nx1 >> "%LOGFILE%"
+    echo WARNING: Conversion failed for %~nx1
+)
+echo.
+shift
+goto :drag_mode
+
+:all_done
+if "%found%"=="0" (
+    echo No video files found.
+    echo Drag a SBS 3D file onto this bat, or place files in .\Input\
+    echo Supported: mp4 mkv avi mov m4v wmv flv webm mpeg mpg
     echo [%LOGSTAMP%] No input files found >> "%LOGFILE%"
 )
 
@@ -721,6 +1051,7 @@ Write-BatFile "Open MPV.bat" @'
 @echo off
 @title MPV Player
 setlocal
+cd /d "%~dp0"
 set MPV=.\core\mpv\mpv.exe
 
 if not exist "%MPV%" (
@@ -973,20 +1304,26 @@ echo [MPV] Downloading latest Windows build...
 if not exist ".\core\mpv" mkdir ".\core\mpv"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "try {" ^
-    "  Add-Type -AssemblyName System.IO.Compression.FileSystem;" ^
     "  $api = Invoke-RestMethod 'https://api.github.com/repos/zhongfly/mpv-winbuild/releases/latest' -UseBasicParsing;" ^
     "  Write-Host ('  Latest release: ' + $api.tag_name);" ^
-    "  $asset = $api.assets | Where-Object { $_.name -match 'mpv-x86_64.*\.zip$' } | Select-Object -First 1;" ^
-    "  if (-not $asset) { Write-Host '  ERROR: No x64 zip found. Check https://github.com/zhongfly/mpv-winbuild/releases manually.'; return; }" ^
+    "  $asset = $api.assets | Where-Object { $_.name -match 'mpv-x86_64.*\.7z$' } | Select-Object -First 1;" ^
+    "  if (-not $asset) { Write-Host '  ERROR: No x64 .7z found. Check https://github.com/zhongfly/mpv-winbuild/releases manually.'; return; }" ^
     "  Write-Host ('  Downloading: ' + $asset.name + ' (' + [math]::Round($asset.size/1MB,1) + ' MB)');" ^
-    "  $zip = '.\core\mpv\_dl.zip';" ^
-    "  Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing;" ^
+    "  $archive = '.\core\mpv\_dl.7z';" ^
+    "  Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $archive -UseBasicParsing;" ^
+    "  if (-not (Test-Path '.\core\7zr.exe')) {" ^
+    "    Write-Host '  7zr.exe not found - downloading...';" ^
+    "    Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7zr.exe' -OutFile '.\core\7zr.exe' -UseBasicParsing;" ^
+    "  }" ^
+    "  Write-Host '  Extracting...';" ^
     "  $tmp = '.\core\mpv\_tmp';" ^
     "  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force; }" ^
-    "  [System.IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path $zip).Path, (New-Item $tmp -ItemType Directory -Force).FullName);" ^
-    "  $exes = Get-ChildItem $tmp -Recurse -Include 'mpv.exe';" ^
-    "  foreach ($e in $exes) { Copy-Item $e.FullName '.\core\mpv\' -Force; Write-Host ('  Installed: ' + $e.Name); }" ^
-    "  Remove-Item $zip -Force; Remove-Item $tmp -Recurse -Force;" ^
+    "  New-Item $tmp -ItemType Directory -Force | Out-Null;" ^
+    "  $outFlag = '-o' + (Resolve-Path $tmp).Path;" ^
+    "  & '.\core\7zr.exe' x $archive $outFlag -y | Out-Null;" ^
+    "  $exe = Get-ChildItem $tmp -Recurse -Include 'mpv.exe' | Select-Object -First 1;" ^
+    "  if ($exe) { Copy-Item $exe.FullName '.\core\mpv\' -Force; Write-Host ('  Installed: ' + $exe.Name); }" ^
+    "  Remove-Item $archive -Force; Remove-Item $tmp -Recurse -Force;" ^
     "  Write-Host '  MPV updated successfully.';" ^
     "} catch { Write-Host ('  ERROR: ' + $_.Exception.Message) }"
 exit /b
@@ -1043,7 +1380,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "  New-Item $tmp -ItemType Directory -Force | Out-Null;" ^
     "  $outFlag = '-o' + (Resolve-Path $tmp).Path;" ^
     "  & '.\core\7zr.exe' x $archive $outFlag -y | Out-Null;" ^
-    "  Get-ChildItem $tmp | ForEach-Object { Copy-Item $_.FullName '.\core\staxrip\' -Recurse -Force; }" ^
+    "  $sub = Get-ChildItem $tmp -Directory | Select-Object -First 1;" ^
+    "  $src = if ($sub) { $sub.FullName } else { $tmp };" ^
+    "  Get-ChildItem $src | ForEach-Object { Copy-Item $_.FullName '.\core\staxrip\' -Recurse -Force; }" ^
     "  Remove-Item $archive -Force; Remove-Item $tmp -Recurse -Force;" ^
     "  Write-Host '  StaxRip installed to .\core\staxrip\';" ^
     "} catch { Write-Host ('  ERROR: ' + $_.Exception.Message) }"
@@ -1154,6 +1493,47 @@ if ((Test-Path $dest) -and -not $Force) {
     } catch { Write-Fail "7zr.exe: $($_.Exception.Message)"; $results['7-Zip (7zr)'] = "FAILED" }
 }
 
+# --- pycore (portable Python + mnamer) ---
+$dest = Join-Path $root "core\python-3.12.3"
+if ((Test-Path $dest) -and -not $Force) {
+    Write-Skip "pycore (Python + mnamer) already installed"
+    $results['pycore'] = "skipped (exists)"
+} else {
+    try {
+        $archive = Join-Path $root "core\_pycore.7z"
+        Download-File 'https://github.com/pasiegel/Media-Scripts-2026/raw/refs/heads/main/resources/pycore.7z' $archive "pycore - Python + mnamer"
+        $7z      = Get-7zTool
+        Write-Step "Extracting pycore into core\..."
+        $outFlag = '-o' + (Join-Path $root "core")
+        & $7z x $archive $outFlag -y | Out-Null
+        Remove-Item $archive -Force
+        Write-OK "pycore installed (python-3.12.3 + mnamer)"
+        $results['pycore'] = "installed"
+    } catch {
+        Write-Fail "pycore: $($_.Exception.Message)"
+        $results['pycore'] = "FAILED"
+    }
+}
+
+# --- Patch portable Python paths ---
+# Must run after pycore is present. Re-run any time the folder is moved.
+$fixBat = Join-Path $root "core\scripts\make_winpython_fix.bat"
+if (Test-Path $fixBat) {
+    Write-Step "Patching portable Python paths (make_winpython_fix)..."
+    try {
+        & cmd.exe /c "`"$fixBat`"" 2>&1 | Out-Null
+        Write-OK "Python paths patched - mnamer ready"
+        $results['Python path fix'] = "OK"
+    } catch {
+        Write-Fail "Python path fix failed: $($_.Exception.Message)"
+        $results['Python path fix'] = "FAILED - run Setup_Path_Variables_If_Error.bat manually"
+    }
+} else {
+    Write-Warn "core\scripts\make_winpython_fix.bat not found - pycore may not be extracted yet"
+    Write-Warn "If mnamer fails, run Setup_Path_Variables_If_Error.bat"
+    $results['Python path fix'] = "skipped (scripts not found)"
+}
+
 # --- FFmpeg ---
 $dest = Join-Path $root "core\ffmpeg\ffmpeg.exe"
 if ((Test-Path $dest) -and -not $Force) {
@@ -1183,15 +1563,15 @@ if ((Test-Path $dest) -and -not $Force) {
 } else {
     try {
         $rel   = Get-GitHubLatest "zhongfly/mpv-winbuild"
-        $asset = $rel.assets | Where-Object { $_.name -match 'mpv-x86_64.*\.zip$' } | Select-Object -First 1
-        if (-not $asset) { throw "No x64 zip found" }
-        $zip = Join-Path $root "core\mpv\_dl.zip"
-        $tmp = Join-Path $root "core\mpv\_tmp"
-        Download-File $asset.browser_download_url $zip "MPV $($rel.tag_name) ($([math]::Round($asset.size/1MB,1)) MB)"
-        Extract-Zip $zip $tmp
+        $asset = $rel.assets | Where-Object { $_.name -match 'mpv-x86_64.*\.7z$' } | Select-Object -First 1
+        if (-not $asset) { throw "No x64 .7z found in release" }
+        $archive = Join-Path $root "core\mpv\_dl.7z"
+        $tmp     = Join-Path $root "core\mpv\_tmp"
+        Download-File $asset.browser_download_url $archive "MPV $($rel.tag_name) ($([math]::Round($asset.size/1MB,1)) MB)"
+        Extract-7z $archive $tmp
         $exe = Get-ChildItem $tmp -Recurse -Include 'mpv.exe' | Select-Object -First 1
         if ($exe) { Copy-Item $exe.FullName (Join-Path $root "core\mpv\") -Force }
-        Remove-Item $zip -Force; Remove-Item $tmp -Recurse -Force
+        Remove-Item $archive -Force; Remove-Item $tmp -Recurse -Force
         Write-OK "MPV installed"
         $results['MPV'] = "installed"
     } catch { Write-Fail "MPV: $($_.Exception.Message)"; $results['MPV'] = "FAILED" }
@@ -1240,7 +1620,9 @@ if ($SkipStaxRip) {
         $tmp     = Join-Path $root "core\staxrip\_tmp"
         Download-File $asset.browser_download_url $archive "StaxRip $($rel.tag_name) ($([math]::Round($asset.size/1MB,1)) MB)"
         Extract-7z $archive $tmp
-        Get-ChildItem $tmp | ForEach-Object { Copy-Item $_.FullName (Join-Path $root "core\staxrip\") -Recurse -Force }
+        $sub = Get-ChildItem $tmp -Directory | Select-Object -First 1
+        $src = if ($sub) { $sub.FullName } else { $tmp }
+        Get-ChildItem $src | ForEach-Object { Copy-Item $_.FullName (Join-Path $root "core\staxrip\") -Recurse -Force }
         Remove-Item $archive -Force; Remove-Item $tmp -Recurse -Force
         Write-OK "StaxRip installed"
         $results['StaxRip'] = "installed"
@@ -1280,8 +1662,7 @@ foreach ($key in $results.Keys) {
 }
 Write-Host ""
 Write-Host "  NOTE: HandBrake presets (presets.json, 480p.json, 2160p.json)" -ForegroundColor Yellow
-Write-Host "        and the portable Python + mnamer must be copied manually" -ForegroundColor Yellow
-Write-Host "        into the core\ folder - these cannot be auto-downloaded." -ForegroundColor Yellow
+Write-Host "        must be present in core\ for the encode scripts to work." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Logs will be written to: $root\logs\" -ForegroundColor White
 Write-Host "  Drop source files into:  $root\Input\" -ForegroundColor White
