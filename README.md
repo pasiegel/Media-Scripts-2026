@@ -2,6 +2,8 @@
 
 A portable, self-contained Windows media toolkit. Run `Setup.bat` once on a fresh machine and the entire environment — folders, scripts, and tools — is built automatically.
 
+Also available as a **Python AIO edition** (see [Python Fork](#python-fork--media-scripts-2026-aio) below) that compiles into a standalone `media_scripts_setup.exe` with no dependencies.
+
 ---
 
 ## Quick Start
@@ -41,6 +43,7 @@ The main setup script. Safe to re-run — existing files and already-installed t
 | `-SkipBatFiles` | Skip writing bat files (tools still download) |
 | `-SkipHandBrake` | Skip HandBrake download (~65 MB) |
 | `-SkipStaxRip` | Skip StaxRip download |
+| `-SkipTsMuxer` | Skip tsMuxer / tsMuxerGUI download |
 
 ### Running directly from PowerShell
 
@@ -49,7 +52,7 @@ The main setup script. Safe to re-run — existing files and already-installed t
 .\Setup.ps1
 
 # Skip large downloads for a quick re-run
-.\Setup.ps1 -SkipHandBrake -SkipStaxRip
+.\Setup.ps1 -SkipHandBrake -SkipStaxRip -SkipTsMuxer
 
 # Re-download everything and overwrite all bat files
 .\Setup.ps1 -Force
@@ -75,7 +78,8 @@ Media_Scripts_2026\
 └── core\
     ├── ffmpeg\
     ├── mpv\
-    └── staxrip\
+    ├── staxrip\
+    └── tsmuxer\
 ```
 
 ### Bat Files Written
@@ -97,6 +101,7 @@ Media_Scripts_2026\
 | `Media_Rename_Only.bat` | Rename media in place using mnamer |
 | `Open MPV.bat` | Launch MPV player with file picker or drag-and-drop |
 | `Open StaxRip.bat` | Launch StaxRip GUI encoder |
+| `Open tsMuxer.bat` | Launch tsMuxerGUI (falls back to CLI if GUI not present) |
 | `FFmpeg Prompt.bat` | Open a command prompt with FFmpeg on the PATH |
 | `Update-Tools.bat` | Check versions and update any installed tool |
 | `Setup_Path_Variables_If_Error.bat` | Re-patch portable Python paths after moving the folder |
@@ -113,6 +118,8 @@ Media_Scripts_2026\
 | **MPV** | `zhongfly/mpv-winbuild` (GitHub Releases) | Portable media player |
 | **HandBrakeCLI** | `HandBrake/HandBrake` (GitHub Releases) | ~65 MB — skip with `-SkipHandBrake` |
 | **StaxRip** | `staxrip/staxrip` (GitHub Releases) | GUI encoder — skip with `-SkipStaxRip` |
+| **tsMuxer** | `justdan96/tsMuxer` (GitHub Releases) | TS/Blu-ray muxer CLI — skip with `-SkipTsMuxer` |
+| **tsMuxerGUI** | `justdan96/tsMuxer` (GitHub Releases) | GUI front-end for tsMuxer — installed alongside CLI |
 | **comics-dl** | `Girbons/comics-downloader` (GitHub Releases) | Comic book downloader |
 | **7zr.exe** | `7-zip.org` | Standalone 7-Zip (~400 KB), used to extract `.7z` archives |
 | **pycore** | `pasiegel/Media-Scripts-2026` (this repo) | Portable Python 3.12.3 + mnamer |
@@ -143,9 +150,75 @@ This re-runs the WinPython path fix (`make_winpython_fix.bat`) and restores full
 
 ---
 
+## Python Fork — Media Scripts 2026 AIO
+
+A standalone Python implementation lives in `media-scripts-python/`. It mirrors all functionality of `Setup.ps1`, adds an interactive startup prompt, and compiles into a single portable `media_scripts_setup.exe` using PyInstaller — no Python installation required on the target machine.
+
+### Files
+
+| File | Description |
+|---|---|
+| `setup.py` | Full Python port — stdlib only, no pip dependencies |
+| `media_scripts_setup.exe` | Compiled standalone executable (ready to run) |
+| `Setup.bat` | Launcher — runs `media_scripts_setup.exe` if present, otherwise `python setup.py` |
+| `Setup.ps1` | Copy of the PowerShell version, kept in sync |
+| `build-exe.bat` | Recompiles `setup.py` into `media_scripts_setup.exe` using PyInstaller |
+
+### Usage
+
+**Run the compiled exe** (no Python required):
+```
+media_scripts_setup.exe
+```
+
+**Run as Python script** (requires Python 3.10+):
+```
+Setup.bat
+```
+or directly:
+```
+python setup.py
+python setup.py --skip-handbrake --skip-staxrip
+python setup.py --force
+python setup.py --directories-only
+```
+
+Both the exe and the script show an interactive startup prompt when launched with no arguments — displaying available flags and waiting for input before proceeding.
+
+**Recompile the exe:**
+```
+build-exe.bat
+```
+Installs PyInstaller if needed, compiles `setup.py`, and places `media_scripts_setup.exe` in the project root. `Setup.bat` auto-detects and uses it on next run.
+
+### Parameters (Python / exe)
+
+| Flag | Description |
+|---|---|
+| _(none)_ | Full setup — directories, bat files, and all tools |
+| `--force` | Re-download all tools and overwrite existing bat files |
+| `--directories-only` | Create folders only, skip bat files and downloads |
+| `--skip-bat-files` | Skip writing bat files (tools still download) |
+| `--skip-handbrake` | Skip HandBrake download (~65 MB) |
+| `--skip-staxrip` | Skip StaxRip download |
+| `--skip-tsmuxer` | Skip tsMuxer / tsMuxerGUI download |
+
+### PyInstaller compile command (manual)
+
+```
+pip install pyinstaller
+pyinstaller --onefile --name media_scripts_setup setup.py
+```
+
+The compiled `media_scripts_setup.exe` is fully self-contained and runs on any Windows 10/11 machine without Python installed.
+
+---
+
 ## Requirements
 
 - Windows 10 / 11
 - PowerShell 5.1 or later (included with Windows)
 - Internet connection for initial tool downloads
 - No admin rights required
+
+> **Python AIO edition only:** Python 3.10+ required to run `setup.py` directly. Not required if using the compiled `media_scripts_setup.exe`.
