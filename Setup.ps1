@@ -1065,12 +1065,13 @@ if not exist "%MPV%" (
 if "%~1"=="" (
     REM No file argument - open file picker via PowerShell
     echo Launching MPV file picker...
-    for /f "delims=" %%f in ('powershell -NoProfile -Command ^
-        "$f = [System.Windows.Forms.OpenFileDialog]::new();" ^
-        "$f.Title = '"'"'Select video to play with MPV'"'"';" ^
-        "$f.Filter = '"'"'Video Files|*.mp4;*.mkv;*.avi;*.mov;*.m4v;*.wmv;*.flv;*.webm;*.mpeg;*.mpg;*.ts|All Files|*.*'"'"';" ^
+    for /f "delims=" %%f in ('powershell -NoProfile -STA -Command ^
         "Add-Type -AssemblyName System.Windows.Forms;" ^
-        "if ($f.ShowDialog() -eq '"'"'OK'"'"') { $f.FileName }"') do (
+        "[System.Windows.Forms.Application]::EnableVisualStyles();" ^
+        "$f = New-Object System.Windows.Forms.OpenFileDialog;" ^
+        "$f.Title = 'Select video to play with MPV';" ^
+        "$f.Filter = 'Video Files|*.mp4;*.mkv;*.avi;*.mov;*.m4v;*.wmv;*.flv;*.webm;*.mpeg;*.mpg;*.ts|All Files|*.*';" ^
+        "if ($f.ShowDialog() -eq 'OK') { $f.FileName }"') do (
         "%MPV%" --really-quiet "%%f"
         goto :end
     )
@@ -1152,7 +1153,8 @@ echo   [5] HandBrakeCLI
 echo   [6] StaxRip
 echo   [7] comics-dl
 echo   [8] 7-Zip  ^(7zr.exe - used for .7z extraction^)
-echo   [9] All of the above
+echo   [9] Rickinator  ^(link-list download manager^)
+echo  [10] All of the above
 echo   [0] Exit
 echo.
 set /p choice="Enter choice(s): "
@@ -1165,15 +1167,16 @@ if "%choice%"=="0" goto :end
 set "any_valid=0"
 for %%c in (%choice%) do (
     if "%%c"=="0" goto :end
-    if "%%c"=="1" ( call :update_ytdlp     & set "any_valid=1" )
-    if "%%c"=="2" ( call :update_spotdl    & set "any_valid=1" )
-    if "%%c"=="3" ( call :update_ffmpeg    & set "any_valid=1" )
-    if "%%c"=="4" ( call :update_mpv       & set "any_valid=1" )
-    if "%%c"=="5" ( call :update_handbrake & set "any_valid=1" )
-    if "%%c"=="6" ( call :update_staxrip   & set "any_valid=1" )
-    if "%%c"=="7" ( call :update_comicsdl  & set "any_valid=1" )
-    if "%%c"=="8" ( call :update_7zr       & set "any_valid=1" )
-    if "%%c"=="9" (
+    if "%%c"=="1"  ( call :update_ytdlp      & set "any_valid=1" )
+    if "%%c"=="2"  ( call :update_spotdl     & set "any_valid=1" )
+    if "%%c"=="3"  ( call :update_ffmpeg     & set "any_valid=1" )
+    if "%%c"=="4"  ( call :update_mpv        & set "any_valid=1" )
+    if "%%c"=="5"  ( call :update_handbrake  & set "any_valid=1" )
+    if "%%c"=="6"  ( call :update_staxrip    & set "any_valid=1" )
+    if "%%c"=="7"  ( call :update_comicsdl   & set "any_valid=1" )
+    if "%%c"=="8"  ( call :update_7zr        & set "any_valid=1" )
+    if "%%c"=="9"  ( call :update_rickinator & set "any_valid=1" )
+    if "%%c"=="10" (
         call :update_ytdlp
         call :update_spotdl
         call :update_ffmpeg
@@ -1182,6 +1185,7 @@ for %%c in (%choice%) do (
         call :update_staxrip
         call :update_comicsdl
         call :update_7zr
+        call :update_rickinator
         set "any_valid=1"
     )
 )
@@ -1220,6 +1224,8 @@ echo   comics-dl: !V!
 set "V=NOT INSTALLED"
 if exist ".\core\7zr.exe" call :_ver_7zr
 echo   7-Zip (7zr.exe): !V!
+
+if exist ".\Rickinator.exe" ( echo   Rickinator: INSTALLED ) else echo   Rickinator: NOT INSTALLED
 exit /b
 
 :_ver_handbrake
@@ -1418,6 +1424,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "  Write-Host '  Saved as comics-dl.exe';" ^
     "  $ver = & '.\core\comics-dl.exe' '--version' 2>&1 | Select-Object -First 1;" ^
     "  Write-Host ('  Installed version: ' + $ver);" ^
+    "} catch { Write-Host ('  ERROR: ' + $_.Exception.Message) }"
+exit /b
+
+REM ================================================================
+:update_rickinator
+echo.
+echo [Rickinator] Downloading...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "try {" ^
+    "  Add-Type -AssemblyName System.IO.Compression.FileSystem;" ^
+    "  $url = 'https://github.com/pasiegel/Rickinator/releases/download/downloader/Rickinator-1.0.zip';" ^
+    "  Write-Host '  Downloading: Rickinator-1.0.zip';" ^
+    "  $zip = '.\Rickinator-1.0.zip';" ^
+    "  Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing;" ^
+    "  Write-Host '  Extracting to root...';" ^
+    "  $tmp = '.\Rickinator_tmp';" ^
+    "  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force; }" ^
+    "  [System.IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path $zip).Path, (New-Item $tmp -ItemType Directory -Force).FullName);" ^
+    "  $sub = Get-ChildItem $tmp -Directory | Select-Object -First 1;" ^
+    "  $src = if ($sub) { $sub.FullName } else { $tmp };" ^
+    "  Get-ChildItem $src | ForEach-Object { Copy-Item $_.FullName '.\' -Recurse -Force; }; Remove-Item $zip -Force; Remove-Item $tmp -Recurse -Force;" ^
+    "  Write-Host '  Rickinator installed to root directory.';" ^
     "} catch { Write-Host ('  ERROR: ' + $_.Exception.Message) }"
 exit /b
 
