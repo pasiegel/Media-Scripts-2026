@@ -16,13 +16,16 @@
     Skip HandBrake download (large ~65 MB file).
 .PARAMETER SkipStaxRip
     Skip StaxRip download.
+.PARAMETER SkipTsMuxer
+    Skip tsMuxer download.
 #>
 param(
     [switch]$Force,
     [switch]$DirectoriesOnly,
     [switch]$SkipBatFiles,
     [switch]$SkipHandBrake,
-    [switch]$SkipStaxRip
+    [switch]$SkipStaxRip,
+    [switch]$SkipTsMuxer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -109,7 +112,8 @@ $dirs = @(
     "logs",
     "core\ffmpeg",
     "core\mpv",
-    "core\staxrip"
+    "core\staxrip",
+    "core\tsmuxer"
 )
 
 foreach ($d in $dirs) {
@@ -1111,6 +1115,35 @@ pause
 endlocal
 '@
 
+Write-BatFile "Open tsMuxer.bat" @'
+@echo off
+@title tsMuxer
+setlocal
+cd /d "%~dp0"
+
+set TSMUXER=.\core\tsmuxer\tsMuxer.exe
+set TSMUXERGUI=.\core\tsmuxer\tsMuxerGUI.exe
+
+if exist "%TSMUXERGUI%" (
+    echo Launching tsMuxerGUI...
+    start "" "%TSMUXERGUI%"
+    goto :end
+)
+
+if exist "%TSMUXER%" (
+    echo tsMuxerGUI not found - launching CLI tsMuxer instead.
+    start "" cmd /k "cd /d "%~dp0core\tsmuxer" && echo tsMuxer CLI ready. Type tsMuxer.exe for usage."
+    goto :end
+)
+
+echo tsMuxer not found at .\core\tsmuxer\
+echo Run Update-Tools.bat and select tsMuxer to download automatically.
+
+:end
+pause
+endlocal
+'@
+
 # core helper bats
 Write-BatFile "core\rename.bat" @'
 .\core\python-3.12.3\Scripts\mnamer.exe --batch --no-overwrite --movie-directory="{name} ({year})" --episode-directory="{series}" output
@@ -1154,7 +1187,8 @@ echo   [6] StaxRip
 echo   [7] comics-dl
 echo   [8] 7-Zip  ^(7zr.exe - used for .7z extraction^)
 echo   [9] Rickinator  ^(link-list download manager^)
-echo  [10] All of the above
+echo  [10] tsMuxer  ^(tsMuxer.exe + tsMuxerGUI.exe^)
+echo  [11] All of the above
 echo   [0] Exit
 echo.
 set /p choice="Enter choice(s): "
@@ -1176,7 +1210,8 @@ for %%c in (%choice%) do (
     if "%%c"=="7"  ( call :update_comicsdl   & set "any_valid=1" )
     if "%%c"=="8"  ( call :update_7zr        & set "any_valid=1" )
     if "%%c"=="9"  ( call :update_rickinator & set "any_valid=1" )
-    if "%%c"=="10" (
+    if "%%c"=="10" ( call :update_tsmuxer    & set "any_valid=1" )
+    if "%%c"=="11" (
         call :update_ytdlp
         call :update_spotdl
         call :update_ffmpeg
@@ -1186,6 +1221,7 @@ for %%c in (%choice%) do (
         call :update_comicsdl
         call :update_7zr
         call :update_rickinator
+        call :update_tsmuxer
         set "any_valid=1"
     )
 )
@@ -1226,6 +1262,8 @@ if exist ".\core\7zr.exe" call :_ver_7zr
 echo   7-Zip (7zr.exe): !V!
 
 if exist ".\Rickinator.exe" ( echo   Rickinator: INSTALLED ) else echo   Rickinator: NOT INSTALLED
+
+if exist ".\core\tsmuxer\tsMuxer.exe" ( echo   tsMuxer: INSTALLED ) else echo   tsMuxer: NOT INSTALLED
 exit /b
 
 :_ver_handbrake
@@ -1450,6 +1488,41 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 exit /b
 
 REM ================================================================
+:update_tsmuxer
+echo.
+echo [tsMuxer] Downloading latest release (CLI + GUI)...
+if not exist ".\core\tsmuxer" mkdir ".\core\tsmuxer"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "try {" ^
+    "  Add-Type -AssemblyName System.IO.Compression.FileSystem;" ^
+    "  $api = Invoke-RestMethod 'https://api.github.com/repos/justdan96/tsMuxer/releases/latest' -UseBasicParsing;" ^
+    "  $tag = $api.tag_name;" ^
+    "  Write-Host ('  Latest release: ' + $tag);" ^
+    "  $cliAsset = $api.assets | Where-Object { $_.name -match 'tsMuxer-.*win64.*\.zip$' } | Select-Object -First 1;" ^
+    "  $cliUrl = if ($cliAsset) { $cliAsset.browser_download_url } else { 'https://github.com/justdan96/tsMuxer/releases/download/' + $tag + '/tsMuxer-' + $tag + '-win64.zip' };" ^
+    "  Write-Host ('  Downloading tsMuxer CLI: ' + $cliUrl.Split('/')[-1]);" ^
+    "  $zip = '.\core\tsmuxer\_cli_dl.zip'; $tmp = '.\core\tsmuxer\_cli_tmp';" ^
+    "  Invoke-WebRequest -Uri $cliUrl -OutFile $zip -UseBasicParsing;" ^
+    "  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force; }" ^
+    "  [System.IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path $zip).Path, (New-Item $tmp -ItemType Directory -Force).FullName);" ^
+    "  $exe = Get-ChildItem $tmp -Recurse -Include 'tsMuxer.exe' | Select-Object -First 1;" ^
+    "  if ($exe) { Copy-Item $exe.FullName '.\core\tsmuxer\tsMuxer.exe' -Force; Write-Host '  Installed: tsMuxer.exe'; }" ^
+    "  Remove-Item $zip -Force; Remove-Item $tmp -Recurse -Force;" ^
+    "  $guiAsset = $api.assets | Where-Object { $_.name -match 'tsMuxerGUI-.*win64.*\.zip$' } | Select-Object -First 1;" ^
+    "  $guiUrl = if ($guiAsset) { $guiAsset.browser_download_url } else { 'https://github.com/justdan96/tsMuxer/releases/download/' + $tag + '/tsMuxerGUI-' + $tag + '-win64.zip' };" ^
+    "  Write-Host ('  Downloading tsMuxerGUI: ' + $guiUrl.Split('/')[-1]);" ^
+    "  $zip = '.\core\tsmuxer\_gui_dl.zip'; $tmp = '.\core\tsmuxer\_gui_tmp';" ^
+    "  Invoke-WebRequest -Uri $guiUrl -OutFile $zip -UseBasicParsing;" ^
+    "  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force; }" ^
+    "  [System.IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path $zip).Path, (New-Item $tmp -ItemType Directory -Force).FullName);" ^
+    "  $exe = Get-ChildItem $tmp -Recurse -Include 'tsMuxerGUI.exe' | Select-Object -First 1;" ^
+    "  if ($exe) { Copy-Item $exe.FullName '.\core\tsmuxer\tsMuxerGUI.exe' -Force; Write-Host '  Installed: tsMuxerGUI.exe'; }" ^
+    "  Remove-Item $zip -Force; Remove-Item $tmp -Recurse -Force;" ^
+    "  Write-Host '  tsMuxer installed to .\core\tsmuxer\';" ^
+    "} catch { Write-Host ('  ERROR: ' + $_.Exception.Message) }"
+exit /b
+
+REM ================================================================
 :summary
 echo.
 echo ================================================================
@@ -1655,6 +1728,48 @@ if ($SkipStaxRip) {
         Write-OK "StaxRip installed"
         $results['StaxRip'] = "installed"
     } catch { Write-Fail "StaxRip: $($_.Exception.Message)"; $results['StaxRip'] = "FAILED" }
+}
+
+# --- tsMuxer (CLI + GUI) ---
+$cliDest = Join-Path $root "core\tsmuxer\tsMuxer.exe"
+$guiDest = Join-Path $root "core\tsmuxer\tsMuxerGUI.exe"
+if ($SkipTsMuxer) {
+    Write-Skip "tsMuxer skipped (-SkipTsMuxer)"
+    $results['tsMuxer'] = "skipped"
+} elseif ((Test-Path $cliDest) -and (Test-Path $guiDest) -and -not $Force) {
+    Write-Skip "tsMuxer already installed"
+    $results['tsMuxer'] = "skipped (exists)"
+} else {
+    try {
+        $rel = Get-GitHubLatest "justdan96/tsMuxer"
+        $tag = $rel.tag_name
+        Write-Step "tsMuxer latest: $tag"
+
+        # CLI
+        $asset = $rel.assets | Where-Object { $_.name -match 'tsMuxer-.*win64.*\.zip$' } | Select-Object -First 1
+        $cliUrl = if ($asset) { $asset.browser_download_url } else { "https://github.com/justdan96/tsMuxer/releases/download/$tag/tsMuxer-$tag-win64.zip" }
+        $zip = Join-Path $root "core\tsmuxer\_cli_dl.zip"
+        $tmp = Join-Path $root "core\tsmuxer\_cli_tmp"
+        Download-File $cliUrl $zip "tsMuxer CLI $tag"
+        Extract-Zip $zip $tmp
+        $exe = Get-ChildItem $tmp -Recurse -Include 'tsMuxer.exe' | Select-Object -First 1
+        if ($exe) { Copy-Item $exe.FullName $cliDest -Force }
+        Remove-Item $zip -Force; Remove-Item $tmp -Recurse -Force
+
+        # GUI
+        $asset = $rel.assets | Where-Object { $_.name -match 'tsMuxerGUI-.*win64.*\.zip$' } | Select-Object -First 1
+        $guiUrl = if ($asset) { $asset.browser_download_url } else { "https://github.com/justdan96/tsMuxer/releases/download/$tag/tsMuxerGUI-$tag-win64.zip" }
+        $zip = Join-Path $root "core\tsmuxer\_gui_dl.zip"
+        $tmp = Join-Path $root "core\tsmuxer\_gui_tmp"
+        Download-File $guiUrl $zip "tsMuxerGUI $tag"
+        Extract-Zip $zip $tmp
+        $exe = Get-ChildItem $tmp -Recurse -Include 'tsMuxerGUI.exe' | Select-Object -First 1
+        if ($exe) { Copy-Item $exe.FullName $guiDest -Force }
+        Remove-Item $zip -Force; Remove-Item $tmp -Recurse -Force
+
+        Write-OK "tsMuxer + tsMuxerGUI installed to core\tsmuxer\"
+        $results['tsMuxer'] = "installed"
+    } catch { Write-Fail "tsMuxer: $($_.Exception.Message)"; $results['tsMuxer'] = "FAILED" }
 }
 
 # --- comics-dl ---
